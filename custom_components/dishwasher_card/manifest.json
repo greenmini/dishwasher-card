@@ -1,9 +1,9 @@
 {
   "domain": "dishwasher_card",
   "name": "Dishwasher Card",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "codeowners": ["@greenmini"],
-  "config_flow": false,
+  "config_flow": true,
   "dependencies": ["frontend", "http"],
   "documentation": "https://github.com/greenmini/dishwasher-card",
   "issue_tracker": "https://github.com/greenmini/dishwasher-card/issues",
