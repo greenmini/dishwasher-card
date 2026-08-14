@@ -1,6 +1,7 @@
 """Custom integration that registers the dishwasher-card Lovelace card.
 
-Install via HACS (integration) or manually into ``custom_components``.
+Install via HACS, then add the integration once from Settings -> Devices
+& Services (it has a config flow so it can be loaded from the UI).
 Once loaded, the card JS is served by Home Assistant itself and injected
 into every frontend page, so no manual Lovelace resource is needed.
 """
@@ -11,18 +12,20 @@ import logging
 from pathlib import Path
 
 from homeassistant.components import frontend
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.typing import ConfigType
 
-DOMAIN = "dishwasher_card"
+from .const import DOMAIN
+
 _LOGGER = logging.getLogger(__name__)
 
 # URL under which Home Assistant serves the card JavaScript
 STATIC_URL = "/static/dishwasher_card/dishwasher-card.js"
 
 
-async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the dishwasher-card integration."""
+async def _register_card(hass: HomeAssistant) -> None:
+    """Serve the card JS and inject it into the frontend."""
     card_file = Path(__file__).parent / "dishwasher-card.js"
 
     # 1. serve the card JS through Home Assistant's own static handler.
@@ -65,4 +68,19 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     except Exception as err:  # noqa: BLE001
         _LOGGER.warning("dishwasher_card: failed to inject module (%s)", err)
 
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up via configuration.yaml (legacy path)."""
+    await _register_card(hass)
+    return True
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up via config flow (UI)."""
+    await _register_card(hass)
+    return True
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload (nothing to tear down)."""
     return True
