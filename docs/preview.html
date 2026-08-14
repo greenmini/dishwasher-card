@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<style>
+  body { background:#1c1c1e; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+  .dw-card { background:#232326; border-radius:14px; box-shadow:0 2px 6px rgba(0,0,0,.5); padding:16px; color:#e5e5e5; width:340px; }
+  .dw-head { display:flex; align-items:center; gap:12px; }
+  .dw-icon { width:44px; height:44px; border-radius:50%; background:#43a047; color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; }
+  .dw-title { flex:1; }
+  .dw-name { font-size:16px; font-weight:600; }
+  .dw-sub { font-size:12px; color:#9e9e9e; margin-top:2px; }
+  .dw-badge { font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; background:#43a047; color:#fff; }
+  .dw-progress { margin-top:14px; }
+  .dw-progress-top { display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px; color:#9e9e9e; }
+  .dw-pct { font-size:20px; font-weight:700; color:#e5e5e5; }
+  .dw-bar { height:8px; border-radius:4px; background:rgba(255,255,255,.12); overflow:hidden; }
+  .dw-bar-inner { height:100%; width:60%; background:#43a047; border-radius:4px; }
+  .dw-stats { display:flex; gap:10px; margin-top:14px; }
+  .dw-stat { flex:1; background:rgba(255,255,255,.05); border-radius:10px; padding:10px 12px; }
+  .dw-stat-label { font-size:11px; color:#9e9e9e; }
+  .dw-stat-value { font-size:15px; font-weight:600; margin-top:2px; }
+  .dw-rows { margin-top:12px; }
+  .dw-row { display:flex; align-items:center; gap:10px; padding:8px 2px; border-top:1px solid rgba(255,255,255,.08); font-size:13px; }
+  .dw-row:first-child { border-top:none; }
+  .dw-row-label { flex:1; color:#9e9e9e; }
+  .dw-row-value { font-weight:500; }
+  .dw-actions { display:flex; gap:8px; margin-top:14px; }
+  .dw-btn { flex:1; text-align:center; padding:10px 0; border-radius:10px; font-size:13px; font-weight:600; }
+  .dw-btn.power { background:#43a047; color:#fff; }
+  .dw-btn.info { background:rgba(255,255,255,.08); color:#e5e5e5; }
+</style>
+</head>
+<body>
+<div class="dw-card">
+  <div class="dw-head">
+    <div class="dw-icon">🍽️</div>
+    <div class="dw-title">
+      <div class="dw-name">洗碗机</div>
+      <div class="dw-sub">电源：开</div>
+    </div>
+    <div class="dw-badge">运行中</div>
+  </div>
+  <div class="dw-progress">
+    <div class="dw-progress-top"><span>洗涤进度</span><span class="dw-pct">60%</span></div>
+    <div class="dw-bar"><div class="dw-bar-inner"></div></div>
+  </div>
+  <div class="dw-stats">
+    <div class="dw-stat"><div class="dw-stat-label">剩余时间</div><div class="dw-stat-value">45 分钟</div></div>
+    <div class="dw-stat"><div class="dw-stat-label">当前功率</div><div class="dw-stat-value">180 W</div></div>
+  </div>
+  <div class="dw-rows">
+    <div class="dw-row"><span class="dw-row-label">当前阶段</span><span class="dw-row-value">烘干</span></div>
+    <div class="dw-row"><span class="dw-row-label">洗涤程序</span><span class="dw-row-value">Normal 55℃</span></div>
+    <div class="dw-row"><span class="dw-row-label">总能耗</span><span class="dw-row-value">2.447 kWh</span></div>
+    <div class="dw-row"><span class="dw-row-label">循环次数</span><span class="dw-row-value">20</span></div>
+  </div>
+  <div class="dw-actions">
+    <div class="dw-btn power">关机</div>
+    <div class="dw-btn info">详情</div>
+  </div>
+</div>
+</body>
+</html>
