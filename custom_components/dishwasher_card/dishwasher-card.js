@@ -1,9 +1,14 @@
-/*!
- * Dishwasher Card v1.0.0
- * 一体化洗碗机状态卡片：电源开关 + 进度 + 剩余时间 + 阶段/程序 + 功率/能耗
- * 用法:
+/**
+ * Dishwasher Card · PIXEL EDITION v2.0.0
+ * Nothing 点阵像素风洗碗机状态卡片 —— 与 ha-air-quality-card 统一设计语言：
+ * #0d0d0d 微网格底（22px 细格 38s 漂移）、5x7 点阵字形渲染全部数值、
+ * LED 方灯呼吸 + 红色品牌标、VU 分段电平条（逐段错峰点亮）、
+ * 等宽字体小标签、级联入场揭示。尊重 prefers-reduced-motion。
+ *
+ * 用法：
  *   type: custom:dishwasher-card
- *   entity: switch.cp7_cp7_relay          (电源开关, 必填)
+ *   entity: switch.cp7_cp7_relay            # 电源开关（必填）
+ *   name: 洗碗机
  *   state: sensor.washing_machine_state
  *   running: binary_sensor.washing_machine_running
  *   progress: sensor.washing_machine_progress
@@ -13,253 +18,481 @@
  *   program: sensor.washing_machine_program
  *   energy: sensor.chu_fang_dishwasher_energy_total
  *   cycle_count: sensor.washing_machine_cycle_count
- *   name: 洗碗机
  */
 
-window.customCards = window.customCards || [];
+const CARD_VERSION = "2.0.0-pixel";
 
-const DW_STYLE = `
-  .dw-card {
-    background: var(--ha-card-background, var(--card-background-color, #fff));
-    border-radius: 14px;
-    box-shadow: var(--ha-card-box-shadow, 0 2px 6px rgba(0,0,0,.15));
-    padding: 16px;
-    color: var(--primary-text-color);
-    font-family: var(--primary-font-family, inherit);
-    cursor: pointer;
-    user-select: none;
-    box-sizing: border-box;
-  }
-  .dw-head { display: flex; align-items: center; gap: 12px; }
-  .dw-icon {
-    width: 44px; height: 44px; border-radius: 50%; flex: none;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--dw-accent); color: #fff;
-  }
-  .dw-icon svg { width: 24px; height: 24px; }
-  .dw-title { flex: 1; min-width: 0; }
-  .dw-name { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dw-sub { font-size: 12px; color: var(--secondary-text-color); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dw-badge {
-    flex: none; font-size: 12px; font-weight: 600; padding: 4px 10px;
-    border-radius: 999px; color: #fff;
-  }
-  .dw-badge.idle { background: var(--disabled-text-color, #9e9e9e); }
-  .dw-badge.running { background: var(--dw-accent); }
-  .dw-badge.done { background: var(--success-color, #43a047); }
-  .dw-progress { margin-top: 14px; }
-  .dw-progress-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
-  .dw-pct { font-size: 20px; font-weight: 700; }
-  .dw-plabel { font-size: 12px; color: var(--secondary-text-color); }
-  .dw-bar { height: 8px; border-radius: 4px; background: var(--divider-color, rgba(0,0,0,.12)); overflow: hidden; }
-  .dw-bar-inner { height: 100%; border-radius: 4px; background: var(--dw-accent); transition: width .4s ease; }
-  .dw-stats { display: flex; gap: 10px; margin-top: 14px; }
-  .dw-stat {
-    flex: 1; min-width: 0; background: var(--secondary-background-color, rgba(0,0,0,.05));
-    border-radius: 10px; padding: 10px 12px;
-  }
-  .dw-stat-label { font-size: 11px; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dw-stat-value { font-size: 15px; font-weight: 600; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dw-rows { margin-top: 12px; }
-  .dw-row { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-top: 1px solid var(--divider-color, rgba(0,0,0,.08)); }
-  .dw-row:first-child { border-top: none; }
-  .dw-row svg { width: 18px; height: 18px; color: var(--dw-accent); flex: none; }
-  .dw-row-label { flex: 1; font-size: 13px; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dw-row-value { font-size: 13px; font-weight: 500; text-align: right; }
-  .dw-actions { display: flex; gap: 8px; margin-top: 14px; }
-  .dw-btn {
-    flex: 1; text-align: center; padding: 10px 0; border-radius: 10px;
-    font-size: 13px; font-weight: 600; border: none; cursor: pointer;
-    font-family: inherit;
-  }
-  .dw-btn.power { background: var(--dw-accent); color: #fff; }
-  .dw-btn.power.off { background: var(--divider-color, rgba(0,0,0,.14)); color: var(--primary-text-color); }
-  .dw-btn.info { background: var(--secondary-background-color, rgba(0,0,0,.05)); color: var(--primary-text-color); }
-`;
-
-const DW_ICONS = {
-  dishwasher: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M18,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V4A2,2 0 0,0 18,2M18,20H6V16H18V20M18,15H6V8H18V15M7,6.5A1,1 0 0,1 6,5.5A1,1 0 0,1 7,4.5A1,1 0 0,1 8,5.5A1,1 0 0,1 7,6.5M10,6.5A1,1 0 0,1 9,5.5A1,1 0 0,1 10,4.5A1,1 0 0,1 11,5.5A1,1 0 0,1 10,6.5M7,13H11V10H7V13Z"/></svg>',
-  timer: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M15,3H9V1H15V3M13,19A7,7 0 0,0 20,12A7,7 0 0,0 13,5A7,7 0 0,0 6,12A7,7 0 0,0 13,19M13,7A5,5 0 0,1 18,12A5,5 0 0,1 13,17A5,5 0 0,1 8,12A5,5 0 0,1 13,7M12,8V13L16,15.5L16.8,14.3L13.5,12.2V8H12Z"/></svg>',
-  flash: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M7,2V13H10V22L17,10H13L17,2H7Z"/></svg>',
-  phase: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12,20A8,8 0 0,0 20,12A8,8 0 0,0 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20M12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22C6.48,22 2,17.52 2,12C2,6.48 6.48,2 12,2M12,6V12L16,14L17,12.5L14,11V6H12Z"/></svg>',
-  program: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M13,9H18.5L13,3.5V9M6,2H14L20,8V20A2,2 0 0,1 18,22H6C4.89,22 4,21.1 4,20V4C4,2.89 4.89,2 6,2M10,18H11V12H10V18M13,18H14V10H13V18M7,18H8V14H7V18Z"/></svg>',
-  energy: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M11.15,3.17L7.4,12.45C7.34,12.58 7.3,12.71 7.3,12.85C7.3,13.4 7.74,13.85 8.29,13.85H12.35L10.95,20.58C10.92,20.77 11,20.95 11.14,21.06C11.38,21.27 11.74,21.27 11.98,21.06L16.53,13.58C16.67,13.38 16.65,13.09 16.48,12.91C16.31,12.74 16.05,12.7 15.84,12.78L12.35,12.15L15.64,4.55C15.67,4.47 15.69,4.4 15.69,4.32C15.69,3.77 15.25,3.32 14.7,3.32H8.5C8.02,3.32 7.61,3.68 7.55,4.15C7.5,4.6 7.75,5.03 8.15,5.19L11.15,6.5V3.17Z"/></svg>',
-  counter: '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M4,6V18H20V6H4M6,9H11V15H13V9H18V7H6V9Z"/></svg>',
+const C = {
+  bg: "#0d0d0d",
+  grid: "rgba(255,255,255,.05)",
+  text: "#eeeeee",
+  dim: "#8a8a8a",
+  faint: "#5a5a5a",
+  off: "rgba(255,255,255,.07)",
+  hair: "rgba(255,255,255,.1)",
+  brand: "#e04b34",
+  green: "#3fbf6f",
+  amber: "#d9c24a",
+  orange: "#e07834",
+  red: "#ff5a3c",
 };
+
+const MONO = 'ui-monospace,"SF Mono",Menlo,Consolas,"PingFang SC","Microsoft YaHei",monospace';
+const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
+
+/* ---------- 5x7 点阵字形 ---------- */
+const G = {
+  "0":["01110","10001","10011","10101","11001","10001","01110"],
+  "1":["00100","01100","00100","00100","00100","00100","01110"],
+  "2":["01110","10001","00001","00010","00100","01000","11111"],
+  "3":["11111","00010","00100","00010","00001","10001","01110"],
+  "4":["00010","00110","01010","10010","11111","00010","00010"],
+  "5":["11111","10000","11110","00001","00001","10001","01110"],
+  "6":["00110","01000","10000","11110","10001","10001","01110"],
+  "7":["11111","00001","00010","00100","01000","01000","01000"],
+  "8":["01110","10001","10001","01110","10001","10001","01110"],
+  "9":["01110","10001","10001","01111","00001","00010","01100"],
+  ".":["00","00","00","00","00","11","11"],
+  "%":["11001","11010","00010","00100","01000","01011","10011"],
+  "-":["00000","00000","00000","01110","00000","00000","00000"],
+  " ":["0","0","0","0","0","0","0"],
+  "A":["01110","10001","10001","11111","10001","10001","10001"],
+  "B":["11110","10001","10001","11110","10001","10001","11110"],
+  "D":["11110","10001","10001","10001","10001","10001","11110"],
+  "E":["11111","10000","10000","11110","10000","10000","11111"],
+  "F":["11111","10000","10000","11110","10000","10000","10000"],
+  "G":["01110","10000","10000","10111","10001","10001","01110"],
+  "I":["01110","00100","00100","00100","00100","00100","01110"],
+  "L":["10000","10000","10000","10000","10000","10000","11111"],
+  "N":["10001","11001","10101","10011","10001","10001","10001"],
+  "O":["01110","10001","10001","10001","10001","10001","01110"],
+  "P":["11110","10001","10001","11110","10000","10000","10000"],
+  "R":["11110","10001","10001","11110","10100","10010","10001"],
+  "U":["10001","10001","10001","10001","10001","10001","01110"],
+};
+
+function cellsOf(t) {
+  let n = 0;
+  for (const ch of t) { const g = G[ch]; if (g) n += g[0].length + 1; }
+  return Math.max(n - 1, 0);
+}
+
+/* 点阵文字渲染：亮点用主色，灭点留 7% 底纹 */
+function drawPixels(cv, text, px, litColor) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = cellsOf(text) * px, h = 7 * px;
+  cv.width = w * dpr; cv.height = h * dpr;
+  cv.style.width = w + "px"; cv.style.height = h + "px";
+  const ctx = cv.getContext("2d");
+  if (!ctx) return;
+  ctx.scale(dpr, dpr);
+  const dot = Math.max(px - Math.max(1, Math.round(px * 0.28)), 1);
+  let cx = 0;
+  for (const ch of text) {
+    const g = G[ch]; if (!g) continue;
+    const gw = g[0].length;
+    for (let r = 0; r < 7; r++) for (let c = 0; c < gw; c++) {
+      ctx.fillStyle = g[r][c] === "1" ? litColor : C.off;
+      ctx.fillRect((cx + c) * px, r * px, dot, dot);
+    }
+    cx += gw + 1;
+  }
+}
+
+/* ---------- 状态定义 ---------- */
+const STATUS = {
+  run:  { word: "RUN",  cn: "运行中", color: C.green },
+  idle: { word: "IDLE", cn: "空闲",   color: C.dim },
+  done: { word: "DONE", cn: "完成",   color: C.green },
+};
+
+/* 进度颜色阈值 */
+function progressColor(v) {
+  if (v < 50) return C.green;
+  if (v < 90) return C.amber;
+  return C.red;
+}
+
+const SEGS = 14; // VU 分段数
 
 class DishwasherCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._config = null;
-    this._hass = null;
-    this._loaded = false;
+    this._values = {};
+    this._revealed = false;
   }
 
   setConfig(config) {
-    if (!config || !config.entity) {
+    this._config = {
+      entity: "", name: "洗碗机",
+      state: "", running: "", progress: "", time_remaining: "",
+      current_power: "", phase: "", program: "", energy: "", cycle_count: "",
+      ...config,
+    };
+    if (!this._config.entity) {
       throw new Error("dishwasher-card: 需要配置 entity（电源开关实体）");
     }
-    this._config = config;
-    this.shadowRoot.innerHTML = `<style>${DW_STYLE}</style><div class="dw-card"></div>`;
-    this._root = this.shadowRoot.querySelector(".dw-card");
-    this._bind();
-    this._loaded = true;
     this._render();
   }
 
-  set hass(hass) {
-    this._hass = hass;
-    if (this._loaded) this._render();
-  }
+  set hass(hass) { this._hass = hass; this._update(); }
 
-  getCardSize() {
-    return 4;
-  }
-
-  _bind() {
-    this._root.addEventListener("click", (ev) => {
-      if (ev.target.closest(".dw-btn.info")) {
-        this._moreInfo(this._config.state || this._config.entity);
-        return;
-      }
-      if (ev.target.closest(".dw-btn.power")) {
-        this._toggle();
-        return;
-      }
-      this._toggle();
-    });
-  }
+  getCardSize() { return 5; }
 
   _st(key) {
     const eid = this._config[key];
-    return eid ? this._hass.states[eid] : undefined;
+    return eid ? this._hass?.states?.[eid] : undefined;
   }
 
-  _num(st) {
-    if (!st) return null;
-    const v = parseFloat(st.state);
+  _num(id) {
+    const s = this._hass?.states?.[id];
+    const v = parseFloat(s?.state);
     return isNaN(v) ? null : v;
   }
 
-  _fmtTime(min) {
-    if (min === null || isNaN(min)) return "—";
-    if (min >= 60) {
-      const h = Math.floor(min / 60);
-      const m = Math.round(min % 60);
-      return h + "小时" + (m ? m + "分" : "");
-    }
-    return Math.round(min) + " 分钟";
-  }
-
-  _fmtPower(w) {
-    if (w === null || isNaN(w)) return "—";
-    if (w >= 1000) return (w / 1000).toFixed(2) + " kW";
-    return w.toFixed(0) + " W";
-  }
-
-  _isRunning() {
-    const run = this._st("running");
-    if (run && ["on", "true", "running", "washing"].includes(String(run.state).toLowerCase())) return true;
-    const st = this._st("state");
-    if (st) {
-      const s = String(st.state).toLowerCase();
-      if (["off", "idle", "standby", "unknown", "unavailable", "empty", "finish", "finished", "done", "clean"].includes(s)) return false;
-      if (s !== "off") return true;
-    }
-    const power = this._num(this._st("current_power"));
-    if (power !== null && power > 10) return true;
-    return false;
-  }
-
-  _badge() {
-    const st = this._st("state");
-    const s = st ? String(st.state).toLowerCase() : "";
-    if (["finish", "finished", "done", "clean"].includes(s)) return { text: "完成", cls: "done" };
-    if (this._isRunning()) return { text: "运行中", cls: "running" };
-    return { text: "空闲", cls: "idle" };
+  _status() {
+    const state = this._st("state");
+    const s = state ? String(state.state).toLowerCase() : "";
+    if (["finish", "finished", "done", "clean"].includes(s)) return STATUS.done;
+    const running = this._st("running");
+    if (running && ["on", "true", "running", "washing"].includes(String(running.state).toLowerCase())) return STATUS.run;
+    if (s && !["off", "idle", "standby", "unknown", "unavailable", "empty", "none"].includes(s)) return STATUS.run;
+    const p = this._num(this._config.current_power);
+    if (p !== null && p > 10) return STATUS.run;
+    return STATUS.idle;
   }
 
   _render() {
-    if (!this._config || !this._hass || !this._root) return;
+    this.shadowRoot.innerHTML = `
+      <style>
+        :host { display: block; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        .card {
+          display: block; position: relative; overflow: hidden;
+          background:
+            linear-gradient(${C.grid} 1px, transparent 1px) 0 0 / 100% 22px,
+            linear-gradient(90deg, ${C.grid} 1px, transparent 1px) 0 0 / 22px 100%,
+            ${C.bg};
+          border: 1px solid ${C.hair};
+          border-radius: 14px;
+          color: ${C.text};
+          font-family: ${MONO};
+          padding: 14px 16px 12px;
+          animation: grid-pan 38s linear infinite;
+          cursor: pointer;
+        }
+        @keyframes grid-pan { to { background-position: 0 22px, 22px 0, 0 0; } }
+
+        .reveal {
+          opacity: 0; transform: translateY(6px);
+          transition: opacity 0.6s ${EASE}, transform 0.6s ${EASE};
+          transition-delay: calc(var(--i, 0) * 70ms);
+        }
+        :host([data-revealed]) .reveal { opacity: 1; transform: translateY(0); }
+
+        /* ---------- 顶栏 ---------- */
+        .top { display: flex; align-items: center; gap: 10px; }
+        .sq { width: 6px; height: 6px; background: ${C.brand}; flex: none; }
+        .ttl { font-size: 9px; letter-spacing: .24em; color: ${C.dim}; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .top .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+        .led {
+          width: 7px; height: 7px; background: ${C.off}; flex: none;
+          transition: background .4s ease;
+        }
+        .led.on { animation: led-breathe 3s ease-in-out infinite; }
+        @keyframes led-breathe {
+          0%, 100% { box-shadow: 0 0 4px var(--led-glow, rgba(63,191,111,.4)); }
+          50%      { box-shadow: 0 0 10px var(--led-glow, rgba(63,191,111,.7)); }
+        }
+        .st-txt { font-size: 9px; letter-spacing: .18em; color: ${C.dim}; }
+
+        /* ---------- 状态主区 ---------- */
+        .hero { display: flex; align-items: center; gap: 18px; padding: 14px 0 12px; }
+        .hero .word { flex: none; }
+        .hero .meta { flex: 1 1 auto; min-width: 0; }
+        .hero .cn { font-size: 20px; font-weight: 600; letter-spacing: .3em; }
+        .hero .sub { margin-top: 6px; font-size: 9px; letter-spacing: .24em; color: ${C.faint}; text-transform: uppercase; }
+
+        /* 进度电平块（4 格 = 100%） */
+        .blocks { display: flex; gap: 5px; margin-top: 10px; }
+        .blk {
+          width: 16px; height: 8px; background: ${C.off}; border-radius: 2px;
+          transition: background .4s ease, box-shadow .4s ease;
+        }
+        .blk.on { box-shadow: 0 0 8px var(--blk-glow, transparent); }
+        ${[0,1,2,3].map(i => `.blk:nth-child(${i+1}) { transition-delay: ${i * 90}ms; }`).join("")}
+
+        .divider { height: 1px; background: ${C.hair}; margin: 0 -16px; }
+
+        /* ---------- 指标列 ---------- */
+        .metrics { display: flex; padding-top: 12px; }
+        .m {
+          flex: 1; min-width: 0; display: flex; flex-direction: column;
+          align-items: center; gap: 8px; padding: 0 4px;
+        }
+        .m + .m { border-left: 1px solid rgba(255,255,255,.07); }
+        .m .num { height: 28px; display: flex; align-items: center; }
+        .m .lb { font-size: 8px; letter-spacing: .18em; color: ${C.faint}; }
+        .m .un { font-size: 8px; letter-spacing: .1em; color: ${C.faint}; margin-top: -5px; }
+
+        /* VU 分段电平条 */
+        .vu { display: flex; gap: 2px; }
+        .seg {
+          width: 4px; height: 12px; background: ${C.off}; border-radius: 1.5px;
+          transition: background .35s ease;
+        }
+        .seg:nth-child(1)  { transition-delay: 0ms; }   .seg:nth-child(2)  { transition-delay: 30ms; }
+        .seg:nth-child(3)  { transition-delay: 60ms; }  .seg:nth-child(4)  { transition-delay: 90ms; }
+        .seg:nth-child(5)  { transition-delay: 120ms; } .seg:nth-child(6)  { transition-delay: 150ms; }
+        .seg:nth-child(7)  { transition-delay: 180ms; } .seg:nth-child(8)  { transition-delay: 210ms; }
+        .seg:nth-child(9)  { transition-delay: 240ms; } .seg:nth-child(10) { transition-delay: 270ms; }
+        .seg:nth-child(11) { transition-delay: 300ms; } .seg:nth-child(12) { transition-delay: 330ms; }
+        .seg:nth-child(13) { transition-delay: 360ms; } .seg:nth-child(14) { transition-delay: 390ms; }
+
+        /* ---------- 明细行 ---------- */
+        .rows { padding-top: 12px; }
+        .row { display: flex; align-items: center; gap: 10px; padding: 7px 2px; border-top: 1px solid rgba(255,255,255,.07); font-size: 9px; letter-spacing: .16em; }
+        .row:first-child { border-top: none; padding-top: 0; }
+        .row .k { flex: 1; color: ${C.faint}; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .row .v { color: ${C.text}; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* ---------- 按钮 ---------- */
+        .actions { display: flex; gap: 8px; padding-top: 12px; }
+        .btn {
+          flex: 1; text-align: center; padding: 10px 0;
+          font-family: ${MONO}; font-size: 9px; letter-spacing: .24em;
+          border: 1px solid ${C.hair}; border-radius: 2px;
+          background: transparent; color: ${C.dim};
+          cursor: pointer; text-transform: uppercase;
+          transition: background .3s ease, color .3s ease, border-color .3s ease;
+        }
+        .btn.power.on { border-color: var(--pw-c, ${C.green}); color: var(--pw-c, ${C.green}); }
+        .btn:active { background: rgba(255,255,255,.08); }
+
+        @media (max-width: 400px) {
+          .metrics { flex-wrap: wrap; }
+          .m { flex: 0 0 33%; padding: 6px 4px; }
+          .m + .m { border-left: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .card { animation: none; }
+          .reveal { transition: none; opacity: 1; transform: none; }
+          .led.on { animation: none; }
+          .seg, .blk { transition: none; }
+        }
+      </style>
+
+      <div class="card">
+        <div class="top reveal" style="--i:0">
+          <span class="sq"></span>
+          <span class="ttl">DISH // ${this._config.name}</span>
+          <span class="right">
+            <span class="led"></span>
+            <span class="st-txt">--</span>
+          </span>
+        </div>
+
+        <div class="hero reveal" style="--i:1">
+          <canvas class="word"></canvas>
+          <div class="meta">
+            <div class="cn">--</div>
+            <div class="sub">WASH CYCLE // 洗涤状态</div>
+            <div class="blocks">
+              <span class="blk"></span><span class="blk"></span>
+              <span class="blk"></span><span class="blk"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider reveal" style="--i:2"></div>
+
+        <div class="metrics">
+          <div class="m reveal" style="--i:3" data-m="progress">
+            <div class="num"><canvas></canvas></div>
+            <div class="vu">${"<span class='seg'></span>".repeat(SEGS)}</div>
+            <div class="lb">PROGRESS</div>
+            <div class="un">%</div>
+          </div>
+          <div class="m reveal" style="--i:4" data-m="minleft">
+            <div class="num"><canvas></canvas></div>
+            <div class="vu">${"<span class='seg'></span>".repeat(SEGS)}</div>
+            <div class="lb">MIN LEFT</div>
+            <div class="un">MIN</div>
+          </div>
+          <div class="m reveal" style="--i:5" data-m="power">
+            <div class="num"><canvas></canvas></div>
+            <div class="vu">${"<span class='seg'></span>".repeat(SEGS)}</div>
+            <div class="lb">POWER</div>
+            <div class="un">W</div>
+          </div>
+        </div>
+
+        <div class="rows">
+          <div class="row reveal" style="--i:6"><span class="k">PHASE</span><span class="v" data-k="phase">--</span></div>
+          <div class="row reveal" style="--i:7"><span class="k">PROGRAM</span><span class="v" data-k="program">--</span></div>
+          <div class="row reveal" style="--i:8"><span class="k">ENERGY</span><span class="v" data-k="energy">--</span></div>
+          <div class="row reveal" style="--i:9"><span class="k">CYCLES</span><span class="v" data-k="cycles">--</span></div>
+        </div>
+
+        <div class="actions reveal" style="--i:10">
+          <button class="btn power" data-act="power">POWER</button>
+          <button class="btn" data-act="info">INFO</button>
+        </div>
+      </div>
+    `;
+
+    this._wordCv = this.shadowRoot.querySelector(".word");
+    this._metricEls = {};
+    this.shadowRoot.querySelectorAll(".m").forEach((el) => {
+      this._metricEls[el.dataset.m] = {
+        cv: el.querySelector("canvas"),
+        segs: el.querySelectorAll(".seg"),
+      };
+    });
+
+    const card = this.shadowRoot.querySelector(".card");
+    card.addEventListener("click", (ev) => {
+      const act = ev.target.closest("[data-act]")?.dataset.act;
+      if (act === "info") { this._moreInfo(); return; }
+      if (act === "power") { this._toggle(); return; }
+      this._toggle();
+    });
+
+    if (!this._revealed) {
+      this._revealed = true;
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => this.setAttribute("data-revealed", ""))
+      );
+    }
+    this._update();
+  }
+
+  /* 数值滚动：逐帧重绘点阵 */
+  _tweenPixels(cv, from, to, decimals, color) {
+    if (cv._raf) cancelAnimationFrame(cv._raf);
+    const start = performance.now(), dur = 650;
+    const step = (now) => {
+      const t = Math.min((now - start) / dur, 1);
+      const e = 1 - Math.pow(1 - t, 3);
+      drawPixels(cv, (from + (to - from) * e).toFixed(decimals), 4, color);
+      if (t < 1) cv._raf = requestAnimationFrame(step);
+    };
+    cv._raf = requestAnimationFrame(step);
+  }
+
+  _setVu(segs, fraction, color) {
+    const lit = Math.round(Math.max(0, Math.min(1, fraction)) * SEGS);
+    segs.forEach((s, i) => {
+      s.style.background = i < lit ? color : C.off;
+    });
+  }
+
+  _update() {
+    if (!this._hass || !this._config) return;
     const cfg = this._config;
-    const name = cfg.name || "洗碗机";
 
-    const powerSt = this._st("entity");
-    const powerOn = powerSt && powerSt.state === "on";
-    const progressSt = this._st("progress");
-    const progress = this._num(progressSt);
-    const timeSt = this._st("time_remaining");
-    const timeMin = this._num(timeSt);
-    const powerVal = this._num(this._st("current_power"));
-    const phaseSt = this._st("phase");
-    const programSt = this._st("program");
-    const energySt = this._st("energy");
-    const cycleSt = this._st("cycle_count");
+    /* ---- 状态 ---- */
+    const st = this._status();
+    if (this._statusKey !== st.word) {
+      this._statusKey = st.word;
+      drawPixels(this._wordCv, st.word, 7, st.color);
+      const cn = this.shadowRoot.querySelector(".hero .cn");
+      cn.textContent = st.cn;
+      cn.style.color = st.color;
+      const stTxt = this.shadowRoot.querySelector(".st-txt");
+      stTxt.textContent = st.word;
+      stTxt.style.color = st.color;
+      const led = this.shadowRoot.querySelector(".led");
+      led.classList.add("on");
+      led.style.background = st.color;
+      led.style.setProperty("--led-glow", st.color + "aa");
+    }
 
-    const badge = this._badge();
-    const accent = badge.cls === "running" ? "var(--success-color, #43a047)" : "var(--primary-color, #03a9f4)";
-    const sub = powerOn ? "电源：开" : "电源：关";
+    /* ---- 进度 ---- */
+    const prog = this._num(cfg.progress);
+    const progColor = prog === null ? C.faint : progressColor(prog);
+    const powerOn = (this._st("entity")?.state) === "on";
 
-    const rows = [];
-    if (phaseSt) rows.push({ icon: "phase", label: "当前阶段", value: phaseSt.state || "—" });
-    if (programSt) rows.push({ icon: "program", label: "洗涤程序", value: programSt.state || "—" });
-    if (energySt) rows.push({ icon: "energy", label: "总能耗", value: energySt.state + (energySt.attributes.unit_of_measurement ? " " + energySt.attributes.unit_of_measurement : "") });
-    if (cycleSt) rows.push({ icon: "counter", label: "循环次数", value: cycleSt.state || "—" });
+    if (prog !== null) {
+      const prev = this._values.progress;
+      const frac = Math.min(100, Math.max(0, prog)) / 100;
+      if (prev === undefined || prev === null) {
+        drawPixels(this._metricEls.progress.cv, Math.round(prog).toString(), 4, progColor);
+      } else if (Math.abs(prev - prog) > 0.5) {
+        this._tweenPixels(this._metricEls.progress.cv, prev, prog, 0, progColor);
+      }
+      this._values.progress = prog;
+      this._setVu(this._metricEls.progress.segs, frac, progColor);
+      /* 4 格电平块 = 进度四等分 */
+      const blocks = Math.ceil((prog / 100) * 4);
+      this.shadowRoot.querySelectorAll(".blk").forEach((b, i) => {
+        const on = powerOn && i < blocks;
+        b.classList.toggle("on", !!on);
+        b.style.background = on ? progColor : C.off;
+        b.style.setProperty("--blk-glow", on ? progColor + "88" : "transparent");
+      });
+    } else {
+      drawPixels(this._metricEls.progress.cv, "--", 4, C.faint);
+      this._setVu(this._metricEls.progress.segs, 0, C.off);
+      this.shadowRoot.querySelectorAll(".blk").forEach((b, i) => {
+        const on = powerOn && i === 0;
+        b.classList.toggle("on", !!on);
+        b.style.background = on ? progColor : C.off;
+        b.style.setProperty("--blk-glow", on ? progColor + "88" : "transparent");
+      });
+    }
 
-    const rowsHtml = rows.map((r) => `
-      <div class="dw-row">
-        ${DW_ICONS[r.icon] || ""}
-        <span class="dw-row-label">${r.label}</span>
-        <span class="dw-row-value">${r.value}</span>
-      </div>`).join("");
+    /* ---- 剩余时间 ---- */
+    const mins = this._num(cfg.time_remaining);
+    const minsEls = this._metricEls.minleft;
+    if (mins === null) {
+      drawPixels(minsEls.cv, "--", 4, C.faint);
+      this._setVu(minsEls.segs, 0, C.off);
+    } else {
+      drawPixels(minsEls.cv, Math.round(mins).toString(), 4, progColor);
+      this._setVu(minsEls.segs, Math.min(mins, 240) / 240, progColor);
+    }
 
-    const progressHtml = (progress !== null && progress >= 0)
-      ? `<div class="dw-progress">
-           <div class="dw-progress-top">
-             <span class="dw-plabel">洗涤进度</span>
-             <span class="dw-pct">${Math.round(progress)}%</span>
-           </div>
-           <div class="dw-bar"><div class="dw-bar-inner" style="width:${Math.min(100, Math.max(0, progress))}%"></div></div>
-         </div>`
-      : "";
+    /* ---- 功率 ---- */
+    const pwr = this._num(cfg.current_power);
+    const pwrEls = this._metricEls.power;
+    if (pwr === null) {
+      drawPixels(pwrEls.cv, "--", 4, C.faint);
+      this._setVu(pwrEls.segs, 0, C.off);
+    } else {
+      drawPixels(pwrEls.cv, Math.round(pwr).toString(), 4, C.text);
+      this._setVu(pwrEls.segs, Math.min(pwr, 2000) / 2000, C.text);
+    }
 
-    this._root.innerHTML = `
-      <div style="--dw-accent:${accent}">
-        <div class="dw-head">
-          <div class="dw-icon">${DW_ICONS.dishwasher}</div>
-          <div class="dw-title">
-            <div class="dw-name">${name}</div>
-            <div class="dw-sub">${sub}</div>
-          </div>
-          <div class="dw-badge ${badge.cls}">${badge.text}</div>
-        </div>
-        ${progressHtml}
-        <div class="dw-stats">
-          <div class="dw-stat">
-            <div class="dw-stat-label">剩余时间</div>
-            <div class="dw-stat-value">${this._fmtTime(timeMin)}</div>
-          </div>
-          <div class="dw-stat">
-            <div class="dw-stat-label">当前功率</div>
-            <div class="dw-stat-value">${this._fmtPower(powerVal)}</div>
-          </div>
-        </div>
-        ${rowsHtml ? `<div class="dw-rows">${rowsHtml}</div>` : ""}
-        <div class="dw-actions">
-          <button class="dw-btn power ${powerOn ? "" : "off"}">${powerOn ? "关机" : "开机"}</button>
-          <button class="dw-btn info">详情</button>
-        </div>
-      </div>`;
+    /* ---- 明细 ---- */
+    const setRow = (k, eid, suffix) => {
+      const el = this.shadowRoot.querySelector(`[data-k="${k}"]`);
+      const s = this._st(eid) || this._hass?.states?.[eid];
+      el.textContent = s ? (s.state + (suffix || "")) : "--";
+    };
+    setRow("phase", cfg.phase);
+    setRow("program", cfg.program);
+    setRow("energy", cfg.energy, this._st(cfg.energy)?.attributes?.unit_of_measurement ? " " + this._st(cfg.energy).attributes.unit_of_measurement : "");
+    setRow("cycles", cfg.cycle_count);
+
+    /* ---- 电源按钮 ---- */
+    const pBtn = this.shadowRoot.querySelector(".btn.power");
+    pBtn.textContent = powerOn ? "PWR OFF" : "PWR ON";
+    pBtn.classList.toggle("on", powerOn);
+    pBtn.style.setProperty("--pw-c", st.color);
   }
 
   _toggle() {
-    if (!this._config.entity) return;
-    const domain = this._config.entity.split(".")[0];
-    this._hass.callService(domain, "toggle", { entity_id: this._config.entity });
+    const eid = this._config.entity;
+    if (!eid) return;
+    const domain = eid.split(".")[0];
+    this._hass.callService(domain, "toggle", { entity_id: eid });
   }
 
-  _moreInfo(eid) {
+  _moreInfo() {
+    const eid = this._config.state || this._config.entity;
     if (!eid) return;
     window.dispatchEvent(new CustomEvent("hass-more-info", { detail: { entityId: eid } }));
   }
@@ -271,7 +504,10 @@ if (!customElements.get("dishwasher-card")) {
 if (!window.customCards.some((c) => c.type === "dishwasher-card")) {
   window.customCards.push({
     type: "dishwasher-card",
-    name: "洗碗机卡片",
-    description: "一体化洗碗机状态卡片：电源、进度、剩余时间、阶段、能耗",
+    name: "洗碗机卡片 · 像素版",
+    description: "Nothing 点阵像素风：5x7 点阵数值、VU 电平条、LED 呼吸灯、网格漂移背景",
+    preview: true,
   });
 }
+
+console.info(`%c DISHWASHER-CARD %c v${CARD_VERSION} `, "color:#0d0d0d;background:#e04b34;font-weight:700", "color:#e04b34;background:#0d0d0d");
