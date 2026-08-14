@@ -1,21 +1,22 @@
-# Dishwasher Card 🍽️
+# Dishwasher Card · 像素版 🍽️
 
-一体化洗碗机状态卡片（Home Assistant Lovelace 自定义卡片 + 集成）。
+Nothing 点阵像素风的 Home Assistant 洗碗机状态卡片（Lovelace 自定义卡片 + 集成）。
+与 [ha-air-quality-card](https://github.com/greenmini/ha-air-quality-card) **统一设计语言**。
 
 一张卡片显示洗碗机的**电源开关、洗涤进度、剩余时间、当前阶段、洗涤程序、实时功率与总能耗**。
-点击卡片任意处即可开关电源；点击「详情」打开实体详情。
 
 [▶ 在线预览卡片 demo（docs/preview.html）](docs/preview.html)
 
-## 功能
+## 特性
 
-- 🌀 状态徽章：`运行中`（绿）/ `空闲`（灰）/ `完成`（绿）
-- 📊 洗涤进度条（自动变色：<50% 绿、<90% 黄、≥90% 红）
-- ⏱️ 剩余时间自动格式化（`45 分钟` / `1小时20分`）
-- ⚡ 当前功率（超 1kW 自动换算为 kW）
-- 🧾 明细行：当前阶段 / 洗涤程序 / 总能耗 / 循环次数
-- 🔘 点击卡片 = 开关电源；`详情` 按钮 = 打开实体详情
-- 🌐 支持深色/浅色主题，自动跟随 HA 主题变量
+- **5×7 点阵字形渲染全部数值**（灭点保留 7% 底纹，像素屏质感，数值滚动 tween 动画）
+- **状态大字**：`RUN` / `IDLE` / `DONE` 点阵渲染 + LED 呼吸灯 + 状态色
+- **进度电平块**：4 格四等分（0/25/50/75/100%），颜色随进度切换（<50% 绿、<90% 黄、≥90% 红）
+- **VU 分段电平条**：14 段逐段错峰点亮，进度 / 剩余时间 / 功率三路电平
+- **微网格底**：22px 细格背景 38 秒缓慢漂移
+- **动效**：点阵数字逐帧滚动、级联入场揭示、尊重 `prefers-reduced-motion`
+- 🔘 点击卡片任意处 = 开关电源；`POWER` / `INFO` 按钮
+- 深色底、等宽字体，与空气质量卡片风格完全统一
 
 ## 安装
 
@@ -29,14 +30,21 @@
 
 安装后卡片 JS 由 HA 自己托管并自动注入前端，**无需手动添加 Lovelace 资源**。
 
-### 方式二：手动
+### 方式二：手动（仅前端资源）
 
-1. 将 `custom_components/dishwasher_card/` 整个文件夹复制到 HA 的 `custom_components/` 目录
-2. 重启 Home Assistant
+1. 下载 [dishwasher-card.js](https://raw.githubusercontent.com/greenmini/dishwasher-card/main/custom_components/dishwasher_card/dishwasher-card.js) 放到 `/config/www/`
+2. 设置 → 仪表盘 → 资源 → 添加：
+   ```yaml
+   url: /local/dishwasher-card.js
+   type: module
+   ```
+   或直接引用 CDN：
+   ```yaml
+   url: https://cdn.jsdelivr.net/gh/greenmini/dishwasher-card@main/custom_components/dishwasher_card/dishwasher-card.js
+   type: module
+   ```
 
 ## 使用
-
-在仪表盘任意卡片里添加：
 
 ```yaml
 type: custom:dishwasher-card
@@ -71,8 +79,8 @@ cycle_count: sensor.washing_machine_cycle_count
 
 ## 状态判定逻辑
 
-- 任一信号为「运行中」即显示 `运行中`：`running` 为 `on`、或 `state` 非 `off/idle/unknown…`、或功率 > 10W
-- `state` 为 `finish/finished/done/clean` 时显示 `完成`
+- 任一信号为「运行中」即显示 `RUN`：`running` 为 `on`、或 `state` 非 `off/idle/unknown…`、或功率 > 10W
+- `state` 为 `finish/finished/done/clean` 时显示 `DONE`
 
 ## 支持的设备
 
@@ -83,9 +91,9 @@ cycle_count: sensor.washing_machine_cycle_count
 
 ## 常见问题
 
-**卡片显示「Card not found」** → 集成未加载或 JS 未注入，检查：
-1. 是否已重启 HA
-2. 浏览器是否缓存了旧页面（强制刷新 Ctrl+F5）
+**卡片显示「Card not found」** → 资源未加载，检查：
+1. HACS 方式是否已重启 HA；手动方式是否已添加资源并强制刷新（Ctrl+F5）
+2. 若同时通过多种方式加载（CDN + 本地 + 集成），只会注册一次，不会冲突（已做防重复保护）
 
 **开关按钮无效** → 确认 `entity` 是 switch 域且 HA 能正常控制它。
 
