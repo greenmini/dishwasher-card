@@ -1,3 +1,13 @@
 {
-  "title": "Dishwasher Card"
+  "config": {
+    "step": {
+      "user": {
+        "title": "Dishwasher Card",
+        "description": "Add the Dishwasher Card (pixel edition). No configuration needed; just submit."
+      }
+    },
+    "abort": {
+      "already_configured": "Dishwasher Card is already configured"
+    }
+  }
 }
