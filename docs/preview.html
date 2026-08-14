@@ -3,62 +3,67 @@
 <head>
 <meta charset="utf-8">
 <style>
-  body { background:#1c1c1e; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
-  .dw-card { background:#232326; border-radius:14px; box-shadow:0 2px 6px rgba(0,0,0,.5); padding:16px; color:#e5e5e5; width:340px; }
-  .dw-head { display:flex; align-items:center; gap:12px; }
-  .dw-icon { width:44px; height:44px; border-radius:50%; background:#43a047; color:#fff; display:flex; align-items:center; justify-content:center; font-size:22px; }
-  .dw-title { flex:1; }
-  .dw-name { font-size:16px; font-weight:600; }
-  .dw-sub { font-size:12px; color:#9e9e9e; margin-top:2px; }
-  .dw-badge { font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; background:#43a047; color:#fff; }
-  .dw-progress { margin-top:14px; }
-  .dw-progress-top { display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px; color:#9e9e9e; }
-  .dw-pct { font-size:20px; font-weight:700; color:#e5e5e5; }
-  .dw-bar { height:8px; border-radius:4px; background:rgba(255,255,255,.12); overflow:hidden; }
-  .dw-bar-inner { height:100%; width:60%; background:#43a047; border-radius:4px; }
-  .dw-stats { display:flex; gap:10px; margin-top:14px; }
-  .dw-stat { flex:1; background:rgba(255,255,255,.05); border-radius:10px; padding:10px 12px; }
-  .dw-stat-label { font-size:11px; color:#9e9e9e; }
-  .dw-stat-value { font-size:15px; font-weight:600; margin-top:2px; }
-  .dw-rows { margin-top:12px; }
-  .dw-row { display:flex; align-items:center; gap:10px; padding:8px 2px; border-top:1px solid rgba(255,255,255,.08); font-size:13px; }
-  .dw-row:first-child { border-top:none; }
-  .dw-row-label { flex:1; color:#9e9e9e; }
-  .dw-row-value { font-weight:500; }
-  .dw-actions { display:flex; gap:8px; margin-top:14px; }
-  .dw-btn { flex:1; text-align:center; padding:10px 0; border-radius:10px; font-size:13px; font-weight:600; }
-  .dw-btn.power { background:#43a047; color:#fff; }
-  .dw-btn.info { background:rgba(255,255,255,.08); color:#e5e5e5; }
+  body { background:#111; display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; font-family:ui-monospace,"SF Mono",Menlo,Consolas,"PingFang SC","Microsoft YaHei",monospace; }
+  .card { position:relative; overflow:hidden; width:340px; background:
+      linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px) 0 0 / 100% 22px,
+      linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px) 0 0 / 22px 100%,
+      #0d0d0d;
+    border:1px solid rgba(255,255,255,.1); border-radius:14px; color:#eee; padding:14px 16px 12px; }
+  .top { display:flex; align-items:center; gap:10px; font-size:9px; letter-spacing:.24em; color:#8a8a8a; text-transform:uppercase; }
+  .sq { width:6px; height:6px; background:#e04b34; }
+  .right { margin-left:auto; display:flex; align-items:center; gap:8px; color:#3fbf6f; }
+  .led { width:7px; height:7px; background:#3fbf6f; box-shadow:0 0 8px rgba(63,191,111,.7); }
+  .hero { display:flex; align-items:center; gap:18px; padding:14px 0 12px; }
+  .pix-run { font-size:20px; font-weight:700; color:#3fbf6f; letter-spacing:2px; }
+  .meta .cn { font-size:20px; font-weight:600; letter-spacing:.3em; color:#eee; }
+  .meta .sub { margin-top:6px; font-size:9px; letter-spacing:.24em; color:#5a5a5a; text-transform:uppercase; }
+  .blocks { display:flex; gap:5px; margin-top:10px; }
+  .blk { width:16px; height:8px; border-radius:2px; background:#3fbf6f; box-shadow:0 0 8px rgba(63,191,111,.5); }
+  .blk.off { background:rgba(255,255,255,.07); box-shadow:none; }
+  .divider { height:1px; background:rgba(255,255,255,.1); margin:0 -16px; }
+  .metrics { display:flex; padding-top:12px; text-align:center; }
+  .m { flex:1; }
+  .m + .m { border-left:1px solid rgba(255,255,255,.07); }
+  .num { font-size:17px; font-weight:700; color:#eee; height:26px; line-height:26px; }
+  .num.green { color:#3fbf6f; }
+  .vu { display:flex; gap:2px; justify-content:center; margin-top:8px; }
+  .seg { width:4px; height:12px; border-radius:1.5px; background:rgba(255,255,255,.07); }
+  .seg.on { background:#3fbf6f; }
+  .lb { margin-top:8px; font-size:8px; letter-spacing:.18em; color:#5a5a5a; }
+  .un { font-size:8px; color:#5a5a5a; margin-top:4px; }
+  .rows { padding-top:12px; }
+  .row { display:flex; padding:7px 2px; border-top:1px solid rgba(255,255,255,.07); font-size:9px; letter-spacing:.16em; }
+  .row .k { color:#5a5a5a; text-transform:uppercase; }
+  .row .v { margin-left:auto; color:#eee; }
+  .actions { display:flex; gap:8px; padding-top:12px; }
+  .btn { flex:1; text-align:center; padding:10px 0; font-size:9px; letter-spacing:.24em; border:1px solid rgba(255,255,255,.1); border-radius:2px; color:#3fbf6f; text-transform:uppercase; }
+  .btn.ghost { color:#8a8a8a; }
 </style>
 </head>
 <body>
-<div class="dw-card">
-  <div class="dw-head">
-    <div class="dw-icon">🍽️</div>
-    <div class="dw-title">
-      <div class="dw-name">洗碗机</div>
-      <div class="dw-sub">电源：开</div>
+<div class="card">
+  <div class="top"><span class="sq"></span>DISH // 洗碗机<span class="right"><span class="led"></span>RUN</span></div>
+  <div class="hero">
+    <div class="pix-run">RUN</div>
+    <div class="meta">
+      <div class="cn">运行中</div>
+      <div class="sub">WASH CYCLE // 洗涤状态</div>
+      <div class="blocks"><span class="blk"></span><span class="blk"></span><span class="blk"></span><span class="blk off"></span></div>
     </div>
-    <div class="dw-badge">运行中</div>
   </div>
-  <div class="dw-progress">
-    <div class="dw-progress-top"><span>洗涤进度</span><span class="dw-pct">60%</span></div>
-    <div class="dw-bar"><div class="dw-bar-inner"></div></div>
+  <div class="divider"></div>
+  <div class="metrics">
+    <div class="m"><div class="num green">60%</div><div class="vu"><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg"></span></div><div class="lb">PROGRESS</div><div class="un">%</div></div>
+    <div class="m"><div class="num">45</div><div class="vu"><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span></div><div class="lb">MIN LEFT</div><div class="un">MIN</div></div>
+    <div class="m"><div class="num">180</div><div class="vu"><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span></div><div class="lb">POWER</div><div class="un">W</div></div>
   </div>
-  <div class="dw-stats">
-    <div class="dw-stat"><div class="dw-stat-label">剩余时间</div><div class="dw-stat-value">45 分钟</div></div>
-    <div class="dw-stat"><div class="dw-stat-label">当前功率</div><div class="dw-stat-value">180 W</div></div>
+  <div class="rows">
+    <div class="row"><span class="k">PHASE</span><span class="v">烘干</span></div>
+    <div class="row"><span class="k">PROGRAM</span><span class="v">Normal 55℃</span></div>
+    <div class="row"><span class="k">ENERGY</span><span class="v">2.447 kWh</span></div>
+    <div class="row"><span class="k">CYCLES</span><span class="v">20</span></div>
   </div>
-  <div class="dw-rows">
-    <div class="dw-row"><span class="dw-row-label">当前阶段</span><span class="dw-row-value">烘干</span></div>
-    <div class="dw-row"><span class="dw-row-label">洗涤程序</span><span class="dw-row-value">Normal 55℃</span></div>
-    <div class="dw-row"><span class="dw-row-label">总能耗</span><span class="dw-row-value">2.447 kWh</span></div>
-    <div class="dw-row"><span class="dw-row-label">循环次数</span><span class="dw-row-value">20</span></div>
-  </div>
-  <div class="dw-actions">
-    <div class="dw-btn power">关机</div>
-    <div class="dw-btn info">详情</div>
-  </div>
+  <div class="actions"><span class="btn">PWR OFF</span><span class="btn ghost">INFO</span></div>
 </div>
 </body>
 </html>
