@@ -25,28 +25,44 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up the dishwasher-card integration."""
     card_file = Path(__file__).parent / "dishwasher-card.js"
 
-    # 1. serve the card JS through Home Assistant's own static handler
+    # 1. serve the card JS through Home Assistant's own static handler.
+    #    Try each API generation independently; never let setup fail.
     try:
-        from homeassistant.http import StaticPathConfig
+        from homeassistant.components.http import StaticPathConfig
 
         await hass.http.async_register_static_paths(
             [StaticPathConfig(STATIC_URL, str(card_file), False)]
         )
-    except Exception:  # noqa: BLE001 - fall back for older HA versions
-        hass.http.register_static_path(STATIC_URL, str(card_file), cache_headers=False)
+        _LOGGER.debug("dishwasher_card: static path registered (new API)")
+    except Exception as err:  # noqa: BLE001 - fall back for older HA versions
+        _LOGGER.warning(
+            "dishwasher_card: new static API failed (%s), trying legacy", err
+        )
+        try:
+            hass.http.register_static_path(
+                STATIC_URL, str(card_file), cache_headers=False
+            )
+            _LOGGER.debug("dishwasher_card: static path registered (legacy API)")
+        except Exception as err2:  # noqa: BLE001
+            _LOGGER.warning(
+                "dishwasher_card: legacy static API also failed (%s)", err2
+            )
 
     # 2. inject the module into every frontend page
-    extra = hass.data.get(frontend.DATA_EXTRA_MODULE_URL)
-    if extra is not None:
-        if hasattr(extra, "add"):
-            extra.add(STATIC_URL)
+    try:
+        extra = hass.data.get(frontend.DATA_EXTRA_MODULE_URL)
+        if extra is not None:
+            if hasattr(extra, "add"):
+                extra.add(STATIC_URL)
+            else:
+                extra.append(STATIC_URL)
+            _LOGGER.debug("dishwasher_card: injected at %s", STATIC_URL)
         else:
-            extra.append(STATIC_URL)
-        _LOGGER.debug("dishwasher-card registered at %s", STATIC_URL)
-    else:
-        _LOGGER.warning(
-            "frontend extra-module store not available; "
-            "the dishwasher-card will not be injected automatically"
-        )
+            _LOGGER.warning(
+                "dishwasher_card: frontend extra-module store not available; "
+                "the card will not be injected automatically"
+            )
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning("dishwasher_card: failed to inject module (%s)", err)
 
     return True
