@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Dishwasher Card",
+        "description": "添加洗碗机卡片（像素版）。无需任何配置，点击提交即可。"
+      }
+    },
+    "abort": {
+      "already_configured": "Dishwasher Card 已添加"
+    }
+  }
+}
