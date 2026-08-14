@@ -1,0 +1,12 @@
+{
+  "domain": "dishwasher_card",
+  "name": "Dishwasher Card",
+  "version": "1.0.0",
+  "codeowners": ["@greenmini"],
+  "config_flow": false,
+  "dependencies": ["frontend", "http"],
+  "documentation": "https://github.com/greenmini/dishwasher-card",
+  "issue_tracker": "https://github.com/greenmini/dishwasher-card/issues",
+  "iot_class": "local_push",
+  "requirements": []
+}
