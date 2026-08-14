@@ -3,6 +3,8 @@
 Nothing 点阵像素风的 Home Assistant 洗碗机状态卡片（Lovelace 自定义卡片 + 集成）。
 与 [ha-air-quality-card](https://github.com/greenmini/ha-air-quality-card) **统一设计语言**。
 
+> 🏠 属于 [greenmini · HA 卡片家族](https://github.com/greenmini/ha-cards)，设计语言见 [docs/design.md](https://github.com/greenmini/ha-cards/blob/main/docs/design.md)。
+
 一张卡片显示洗碗机的**电源开关、洗涤进度、剩余时间、当前阶段、洗涤程序、实时功率与总能耗**。
 
 [▶ 在线预览卡片 demo（docs/preview.html）](docs/preview.html)
